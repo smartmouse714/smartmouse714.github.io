@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <script src="dashboard.js" defer></script>
+  <title>ANZ Dashboard</title>
+</head>
+
+<body>
+
+  <div class="dashboard">
+    <!-- NZ Card -->
+    <div class="card">
+      <h1>NZ</h1>
+       
+      <div class="subtitle">
+        DST change dates
+      </div>
+       
+      <div class="grid">
+        <div class="box">
+          <div class="label">Current DST Status</div>
+          <div id="nzStatus" class="value">Loading...</div>
+        </div>
+         
+        <div class="box">
+          <div class="label">Last DST Event</div>
+          <div id="nzLastChange" class="value">Loading...</div>
+        </div>
+         
+        <div class="box">
+          <div class="label">Next DST Event</div>
+          <div id="nzNextChange" class="value">Loading...</div>
+        </div>
+      </div>
+       
+      <div class="countdown">
+        <div>Countdown to Next Change</div>
+        <div class="countdown-number" id="nzCountdown">
+          Loading...
+        </div>
+      </div>
+
+      <footer>
+        DST starts on the last Sunday of September and ends on the first Sunday of April.
+      </footer>
+    </div>
+     
+    <!-- AU Card -->
+    <div class="card">
+      <h1>AU</h1>
+       
+      <div class="subtitle">
+        DST change dates
+      </div>
+       
+      <div class="grid">
+        <div class="box">
+          <div class="label">Current DST Status</div>
+          <div id="auStatus" class="value">Loading...</div>
+        </div>
+         
+        <div class="box">
+          <div class="label">Last DST Event</div>
+          <div id="auLastChange" class="value">Loading...</div>
+        </div>
+         
+        <div class="box">
+          <div class="label">Next DST Event</div>
+          <div id="auNextChange" class="value">Loading...</div>
+        </div>
+         
+      <div class="countdown">
+        <div>Countdown to Next Change</div>
+        <div class="countdown-number" id="auCountdown">
+          Loading...
+        </div>
+      </div>
+
+      <footer>
+        DST starts on the first Sunday of October and ends on the first Sunday of April.
+      </footer>
+    </div>
+  </div>
+
+</body>
+
+</html>
