@@ -378,6 +378,19 @@ time {
     color: var(--color-text);
 }
 
+/* Emergency */
+.incident {
+    margin-bottom: 1rem;
+    padding: 12px;
+    border: 1px solid #444;
+    border-radius: 6px;
+}
+
+.incident h3 {
+    margin-top: 0;
+    color: #ff9800;
+}
+
 /* ==========================================================================
    13. Responsive
    ========================================================================== */

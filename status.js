@@ -1,5 +1,69 @@
 import { CONFIG } from "./config.js";
 
+async function loadVicIncidents() {
+    const container = document.getElementById("vicIncidents");
+
+    try {
+        // Use a proxy if the RSS feed blocks CORS
+        const rssUrl =
+            "https://api.allorigins.win/raw?url=" +
+            encodeURIComponent(
+                "https://data.emergency.vic.gov.au/Show?pageId=getIncidentRSS"
+            );
+
+        const response = await fetch(rssUrl);
+        const xmlText = await response.text();
+
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(xmlText, "text/xml");
+
+        const items = [...xml.querySelectorAll("item")];
+
+        const keywords = ["FRANKSTON", "MONASH"];
+
+        const matches = items.filter(item => {
+            const title = item.querySelector("title")?.textContent ?? "";
+            const description = item.querySelector("description")?.textContent ?? "";
+
+            const text = `${title} ${description}`.toLowerCase();
+
+            return keywords.some(keyword => text.includes(keyword));
+        });
+
+        if (matches.length === 0) {
+            container.innerHTML =
+                "<p>No active incidents found for Frankston or Monash.</p>";
+            return;
+        }
+
+        container.innerHTML = matches
+            .map(item => {
+                const title = item.querySelector("title")?.textContent ?? "";
+                const description =
+                    item.querySelector("description")?.textContent ?? "";
+                const pubDate =
+                    item.querySelector("pubDate")?.textContent ?? "";
+                const link = item.querySelector("link")?.textContent ?? "#";
+
+                return `
+                    <div class="incident">
+                        <h3>${title}</h3>
+                        <p>${description}</p>
+                        <small>${pubDate}</small><br>
+                        ${link}
+                            View Details
+                        </a>
+                    </div>
+                `;
+            })
+            .join("");
+    } catch (error) {
+        console.error(error);
+        container.innerHTML =
+            "<p>Unable to load incident feed.</p>";
+    }
+}
+
 async function updateTeamViewerStatus() {
     const el = document.getElementById("teamviewerStatus");
     if (!el) return;
@@ -68,6 +132,8 @@ async function updateMicrosoftStatus() {
 function refreshAllStatuses() {
     updateMicrosoftStatus();
     updateTeamViewerStatus();
+	
+	loadVicIncidents();
 }
 
 export function startStatus() {
