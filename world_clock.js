@@ -1,21 +1,39 @@
 import {
     CONFIG,
-    DAY_OFFSETS,
     TIMEZONES,
-    getCity
 } from "./config.js";
 
 import {
     dayOffsetLabel,
-    formatHqDate,
+    formatMyDate,
     formatTime
 } from "./date-utils.js";
+
+/**
+DAY_OFFSETS = [
+    { id: "PerthDayOffset",     timeZone: "Australia/Perth" },
+    { id: "DarwinDayOffset",    timeZone: "Australia/Darwin" },
+    { id: "SydneyDayOffset",    timeZone: "Australia/Sydney" },
+    { id: "BrisbaneDayOffset",  timeZone: "Australia/Brisbane" },
+    { id: "AdelaideDayOffset",  timeZone: "Australia/Adelaide" },
+    { id: "AucklandDayOffset",  timeZone: "Pacific/Auckland" },
+    { id: "LondonDayOffset",    timeZone: "Europe/London" },
+    { id: "DenverDayOffset",    timeZone: "America/Denver" }
+];
+ */
+const DAY_OFFSETS = TIMEZONES.map(({ label, timeZone }) => ({
+    id: `${label}DayOffset`,
+    timeZone
+}));
+
+const getCity = zone => zone.split("/").at(-1);
+// export const getCity = (timeZone) => timeZone?.split("/").pop()?.replaceAll("_", " ") ?? "";
 
 const cityElements = new Map();
 
 function cacheElements() {
-    for (const zone of TIMEZONES) {
-        const city = getCity(zone);
+    for (const { timeZone } of TIMEZONES) {
+        const city = getCity(timeZone);
         const element = document.getElementById(`${city}Clock`);
 
         if (element) {
@@ -75,7 +93,7 @@ function drawCenterPin(ctx) {
     ctx.fill();
 }
 
-function drawAnalogClock() {
+function drawAnalogClock(now) {
     const canvas = document.getElementById("hq-clock");
     if (!canvas) return;
 
@@ -86,13 +104,13 @@ function drawAnalogClock() {
     ctx.save();
     ctx.translate(radius, radius);
 
-    const now = new Date(
-        new Date().toLocaleString("en-US", { timeZone: CONFIG.analogTimezone })
+    const zoneDate = new Date(
+        now.toLocaleString("en-US", { timeZone: CONFIG.myTimezone })
     );
 
-    const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
-    const minutes = now.getMinutes() + seconds / 60;
-    const hours = (now.getHours() % 12) + minutes / 60;
+    const seconds = zoneDate.getSeconds() + zoneDate.getMilliseconds() / 1000;
+    const minutes = zoneDate.getMinutes() + seconds / 60;
+    const hours = (zoneDate.getHours() % 12) + minutes / 60;
 
     drawClockFace(ctx, radius);
     drawClockNumbers(ctx, radius);
@@ -103,11 +121,11 @@ function drawAnalogClock() {
     ctx.restore();
 }
 
-function updateDate() {
+function updateDate(now) {
     const currentDate = document.getElementById("currentDate");
     if (!currentDate) return;
 
-    const { text, dateTime } = formatHqDate(new Date());
+    const { text, dateTime } = formatMyDate(now, CONFIG.myTimezone);
     currentDate.textContent = text;
     currentDate.dateTime = dateTime;
 }
@@ -118,35 +136,33 @@ function updateDayOffsetLabels(now) {
         if (!element) continue;
 
         element.textContent = dayOffsetLabel(
-            CONFIG.analogTimezone,
+            CONFIG.myTimezone,
             timeZone,
             now
         );
     }
 }
 
-function updateClocks() {
-    const now = new Date();
-
-    for (const zone of TIMEZONES) {
-        const element = cityElements.get(getCity(zone));
+function updateClocks(now) {
+    for (const { timeZone } of TIMEZONES) {
+        const element = cityElements.get(getCity(timeZone));
         if (!element) continue;
 
         element.dateTime = now.toISOString();
-        element.textContent = formatTime(now, zone);
+        element.textContent = formatTime(now, timeZone);
     }
 
     updateDayOffsetLabels(now);
 }
 
-function render() {
-    updateDate();
-    updateClocks();
-    drawAnalogClock();
+function render(now = new Date()) {
+    updateDate(now);
+    updateClocks(now);
+    drawAnalogClock(now);
 }
 
-export function startWorldClock() {
+export function startWorldClock(now = new Date()) {
     cacheElements();
-    render();
-    setInterval(render, CONFIG.refreshInterval);
+    render(now);
+    setInterval(() => render(new Date()), CONFIG.refreshInterval);
 }

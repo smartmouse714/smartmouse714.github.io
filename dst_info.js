@@ -1,67 +1,73 @@
+import {
+    DST_RULES,
+    DST_ZONES
+} from "./config.js";
+
+function getTimeZoneOffset(timestamp, timeZone) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
+        hourCycle: "h23"
+    }).formatToParts(timestamp);
+
+    const values = Object.fromEntries(
+        parts.map(({ type, value }) => [type, Number(value)])
+    );
+    const localTimestamp = Date.UTC(
+        values.year,
+        values.month - 1,
+        values.day,
+        values.hour,
+        values.minute,
+        values.second
+    );
+
+    return localTimestamp - Math.floor(timestamp / 1000) * 1000;
+}
+
 /**
- * DST information and countdown for Australia, New Zealand, UK, and Canada.
- *
- * Rules:
- *   NZ  – starts last Sunday of September, ends first Sunday of April
- *   AU  – starts first Sunday of October,  ends first Sunday of April
- *   UK  – starts last Sunday of March,     ends last Sunday of October
- *   CA  – starts second Sunday of March,   ends first Sunday of November
+ * year → e.g. 2026
+ * month → 0-based month (0 = Jan, 11 = Dec)
+ * hour → hour of day (defaults to 2)
+ * nth → which Sunday (defaults to 1 for first Sunday)
+ * last → if true, use the last Sunday in the month (defaults to false)
+ * timeZone → IANA timezone like "Australia/Melbourne"
  */
+function createSundayDate(year, { month, hour = 2, nth = 1, last = false }, timeZone) {
+    const firstDayOfMonth = new Date(Date.UTC(year, month, 1));
+    const lastDayOfMonth = new Date(firstDayOfMonth);
+    lastDayOfMonth.setUTCMonth(month + 1, 0);
+    const day = last
+        ? lastDayOfMonth.getUTCDate() - lastDayOfMonth.getUTCDay()           // Last Sunday
+        : 1 + ((7 - firstDayOfMonth.getUTCDay()) % 7) + (nth === 2 ? 7 : 0); // First or second Sunday
+    const wallTime = Date.UTC(year, month, day, hour);
+    const offsetBeforeTransition = getTimeZoneOffset(
+        wallTime - 24 * 60 * 60 * 1000,
+        timeZone
+    );
 
-function firstSundayOfApril(year) {
-    const d = new Date(year, 3, 1);
-    d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
-    d.setHours(3, 0, 0, -1);
-    return d;
+    return new Date(wallTime - offsetBeforeTransition - 1);
 }
 
-function lastSundayOfSeptember(year) {
-    const d = new Date(year, 8, 30);
-    d.setDate(d.getDate() - d.getDay());
-    d.setHours(2, 0, 0, -1);
-    return d;
+function getYearInTimezone(date, timeZone) {
+    const year = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric"
+    }).formatToParts(date).find(({ type }) => type === "year")?.value;
+
+    return Number(year);
 }
 
-function firstSundayOfOctober(year) {
-    const d = lastSundayOfSeptember(year);
-    d.setDate(d.getDate() + 7);
-    return d;
-}
+function getNorthernDSTDetails(startRule, endRule, timeZone, now) {
+    const year = getYearInTimezone(now, timeZone);
 
-function lastSundayOfMarch(year) {
-    const d = new Date(year, 2, 31);
-    d.setDate(d.getDate() - d.getDay());
-    d.setHours(1, 0, 0, -1);
-    return d;
-}
-
-function lastSundayOfOctober(year) {
-    const d = new Date(year, 9, 31);
-    d.setDate(d.getDate() - d.getDay());
-    d.setHours(1, 0, 0, -1);
-    return d;
-}
-
-function secondSundayOfMarch(year) {
-    const d = new Date(year, 2, 1);
-    d.setDate(d.getDate() + ((7 - d.getDay()) % 7) + 7);
-    d.setHours(2, 0, 0, -1);
-    return d;
-}
-
-function firstSundayOfNovember(year) {
-    const d = new Date(year, 10, 1);
-    d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
-    d.setHours(2, 0, 0, -1);
-    return d;
-}
-
-function getNorthernDSTDetails(startFn, endFn) {
-    const now = new Date();
-    const year = now.getFullYear();
-
-    const startThisYear = startFn(year);
-    const endThisYear = endFn(year);
+    const startThisYear = createSundayDate(year, startRule, timeZone);
+    const endThisYear = createSundayDate(year, endRule, timeZone);
 
     if (now >= startThisYear && now < endThisYear) {
         return {
@@ -76,7 +82,7 @@ function getNorthernDSTDetails(startFn, endFn) {
     if (now < startThisYear) {
         return {
             isDST: false,
-            lastChange: endFn(year - 1),
+            lastChange: createSundayDate(year - 1, endRule, timeZone),
             lastEvent: "end",
             nextChange: startThisYear,
             nextEvent: "start"
@@ -87,24 +93,22 @@ function getNorthernDSTDetails(startFn, endFn) {
         isDST: false,
         lastChange: endThisYear,
         lastEvent: "end",
-        nextChange: startFn(year + 1),
+        nextChange: createSundayDate(year + 1, startRule, timeZone),
         nextEvent: "start"
     };
 }
 
-function getDSTDetails(startFn, endFn) {
-    const now = new Date();
-    const year = now.getFullYear();
-
-    const startThisYear = startFn(year);
-    const endThisYear = endFn(year);
+function getSouthernDSTDetails(startRule, endRule, timeZone, now) {
+    const year = getYearInTimezone(now, timeZone);
+    const startThisYear = createSundayDate(year, startRule, timeZone);
+    const endThisYear = createSundayDate(year, endRule, timeZone);
 
     if (now >= startThisYear) {
         return {
             isDST: true,
             lastChange: startThisYear,
             lastEvent: "start",
-            nextChange: endFn(year + 1),
+            nextChange: createSundayDate(year + 1, endRule, timeZone),
             nextEvent: "end"
         };
     }
@@ -112,7 +116,7 @@ function getDSTDetails(startFn, endFn) {
     if (now < endThisYear) {
         return {
             isDST: true,
-            lastChange: startFn(year - 1),
+            lastChange: createSundayDate(year - 1, startRule, timeZone),
             lastEvent: "start",
             nextChange: endThisYear,
             nextEvent: "end"
@@ -128,13 +132,18 @@ function getDSTDetails(startFn, endFn) {
     };
 }
 
-const nz = getDSTDetails(lastSundayOfSeptember, firstSundayOfApril);
-const au = getDSTDetails(firstSundayOfOctober, firstSundayOfApril);
-const uk = getNorthernDSTDetails(lastSundayOfMarch, lastSundayOfOctober);
-const ca = getNorthernDSTDetails(secondSundayOfMarch, firstSundayOfNovember);
+function getDSTDetails(now) {
+    return {
+        nz: getSouthernDSTDetails(DST_RULES.NZ.start, DST_RULES.NZ.end, DST_ZONES.NZ, now),
+        au: getSouthernDSTDetails(DST_RULES.AU.start, DST_RULES.AU.end, DST_ZONES.AU, now),
+        uk: getNorthernDSTDetails(DST_RULES.UK.start, DST_RULES.UK.end, DST_ZONES.UK, now),
+        ca: getNorthernDSTDetails(DST_RULES.CA.start, DST_RULES.CA.end, DST_ZONES.CA, now)
+    };
+}
 
-function formatDate(date) {
-    return date.toLocaleDateString("en-US", {
+function formatDate(date, timeZone) {
+    return date.toLocaleString("en-US", {
+        timeZone,
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -143,49 +152,49 @@ function formatDate(date) {
     });
 }
 
-function nowInTimezone(tz) {
-    return new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
-}
-
-function countdownInDays(targetDate, tz) {
-    const diff = targetDate - nowInTimezone(tz);
-    if (diff <= 0) return null;
+function countdownDays(diff) {
+    if (diff < 0) return null;
     return (diff / (1000 * 60 * 60 * 24)).toFixed(2);
 }
 
-const COUNTDOWN_TARGETS = [
-    { nextChange: ca.nextChange, tz: "America/Denver", selector: ".caCountdown" },
-    { nextChange: uk.nextChange, tz: "Europe/London", selector: ".ukCountdown" },
-    { nextChange: nz.nextChange, tz: "Pacific/Auckland", selector: ".nzCountdown" },
-    { nextChange: au.nextChange, tz: "Australia/Sydney", selector: ".au1Countdown" },
-    { nextChange: au.nextChange, tz: "Australia/Adelaide", selector: ".au2Countdown" }
-];
+function refreshCountdowns(now = new Date()) {
+    const { au, ca, nz, uk } = getDSTDetails(now);
+    const targets = [
+        { nextChange: ca.nextChange, selector: ".caCountdown" },
+        { nextChange: uk.nextChange, selector: ".ukCountdown" },
+        { nextChange: nz.nextChange, selector: ".nzCountdown" },
+        { nextChange: au.nextChange, selector: ".au1Countdown" },
+        { nextChange: au.nextChange, selector: ".au2Countdown" }
+    ];
 
-function refreshCountdowns() {
-    for (const { nextChange, tz, selector } of COUNTDOWN_TARGETS) {
-        const days = countdownInDays(nextChange, tz);
+    for (const { nextChange, selector } of targets) {
+        const days = countdownDays(nextChange - now);
 
         document.querySelectorAll(selector).forEach(el => {
-            if (days === null) {
-                el.textContent = "Time change is occurring now";
-                return;
-            }
+            switch (days) {
+                case null:
+                    el.textContent = "Something is wrong";
+                    break;
+                case 0:
+                    el.textContent = "Time change is occurring now";
+                    break;
+                default:
+                    const meter = document.createElement("meter");
+                    meter.min = 0;
+                    meter.max = 183;
+                    meter.value = Number(days);
+                    meter.low = 30;
+                    meter.high = 90;
+                    meter.optimum = 183;
+                    meter.setAttribute("aria-label", "Days until next time change");
 
-            const meter = document.createElement("meter");
-            meter.min = 0;
-            meter.max = 183;
-            meter.value = Number(days);
-            meter.low = 30;
-            meter.high = 90;
-            meter.optimum = 183;
-            meter.setAttribute("aria-label", "Days until next time change");
-
-            const v = Number(days);
-            meter.className = v < 30 ? "meter-critical"
-                            : v < 90 ? "meter-warn"
+                    const v = Number(days);
+                    meter.className = v < 30 ? "meter-critical"
+                        : v < 90 ? "meter-warn"
                             : "meter-ok";
 
-            el.replaceChildren("Countdown to next change ", meter, ` ${days} days`);
+                    el.replaceChildren("Countdown ", meter, ` ${days} days`);
+            }
         });
     }
 }
@@ -198,21 +207,21 @@ function setDSTLegendState(clockIds, isDST) {
     }
 }
 
-function setChangeText(elements, event, date) {
-    const text = `DST ${event}ed after ${formatDate(date)}`;
+function setChangeText(elements, event, date, timeZone) {
+    const text = `DST ${event}ed after ${formatDate(date, timeZone)}`;
     elements.forEach(el => {
         el.textContent = text;
     });
 }
 
-function setNextText(elements, event, date) {
-    const text = `and will ${event} after ${formatDate(date)}`;
+function setNextText(elements, event, date, timeZone) {
+    const text = `and will ${event} after ${formatDate(date, timeZone)}`;
     elements.forEach(el => {
         el.textContent = text;
     });
 }
 
-function updateDSTUI() {
+function updateDSTUI({ au, ca, nz, uk }) {
     setDSTLegendState(["LondonClock"], uk.isDST);
     setDSTLegendState(["DenverClock"], ca.isDST);
     setDSTLegendState(["AucklandClock"], nz.isDST);
@@ -221,50 +230,58 @@ function updateDSTUI() {
     setChangeText(
         [document.getElementById("ukLastChange")].filter(Boolean),
         uk.lastEvent,
-        uk.lastChange
+        uk.lastChange,
+        DST_ZONES.UK
     );
     setNextText(
         [document.getElementById("ukNextChange")].filter(Boolean),
         uk.nextEvent,
-        uk.nextChange
+        uk.nextChange,
+        DST_ZONES.UK
     );
 
     setChangeText(
         [document.getElementById("caLastChange")].filter(Boolean),
         ca.lastEvent,
-        ca.lastChange
+        ca.lastChange,
+        DST_ZONES.CA
     );
     setNextText(
         [document.getElementById("caNextChange")].filter(Boolean),
         ca.nextEvent,
-        ca.nextChange
+        ca.nextChange,
+        DST_ZONES.CA
     );
 
     setChangeText(
         [document.getElementById("nzLastChange")].filter(Boolean),
         nz.lastEvent,
-        nz.lastChange
+        nz.lastChange,
+        DST_ZONES.NZ
     );
     setNextText(
         [document.getElementById("nzNextChange")].filter(Boolean),
         nz.nextEvent,
-        nz.nextChange
+        nz.nextChange,
+        DST_ZONES.NZ
     );
 
     setChangeText(
         document.querySelectorAll(".auLastChange"),
         au.lastEvent,
-        au.lastChange
+        au.lastChange,
+        DST_ZONES.AU
     );
     setNextText(
         document.querySelectorAll(".auNextChange"),
         au.nextEvent,
-        au.nextChange
+        au.nextChange,
+        DST_ZONES.AU
     );
 }
 
-export function startDstInfo() {
-    updateDSTUI();
-    refreshCountdowns();
-    setInterval(refreshCountdowns, 60_000);
+export function startDSTInfo(now = new Date()) {
+    updateDSTUI(getDSTDetails(now));
+    refreshCountdowns(now);
+    setInterval(() => refreshCountdowns(new Date()), 60_000);
 }

@@ -4,11 +4,10 @@
  * Fetches from Nager.Date API and caches by year+country.
  * If none this month, show nothing.
  */
-
-const API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
+import { HolidayAPI_BASE } from "./config.js";
 
 const REGIONS = [
-    { country: "CA", subdivision: "CA-AB", label: "Calgarians" },
+    { country: "CA", subdivision: "CA-AB",  label: "Calgarians" },
     { country: "GB", subdivision: "GB-ENG", label: "Londoners" },
     { country: "AU", subdivision: "AU-VIC", label: "Melburnians" }
 ];
@@ -19,7 +18,7 @@ async function fetchHolidays(country, year) {
     const key = `${country}-${year}`;
     if (cache.has(key)) return cache.get(key);
 
-    const res = await fetch(`${API_BASE}/${year}/${country}`);
+    const res = await fetch(`${HolidayAPI_BASE}/${year}/${country}`);
     if (!res.ok) throw new Error(`Failed to fetch holidays for ${country} ${year}`);
 
     const data = await res.json();
@@ -33,7 +32,7 @@ function isRelevant(holiday, subdivision) {
     return subdivision && holiday.counties.includes(subdivision);
 }
 
-function getMonthRange(now = new Date()) {
+function getMonthRange(now) {
     const year = now.getFullYear();
     const month = now.getMonth();
 
@@ -57,8 +56,8 @@ function secondTuesdayOfMonth(year, month) {
     return new Date(year, month, secondTue);
 }
 
-async function getThisMonthsHolidays() {
-    const { first, last, month } = getMonthRange();
+async function getThisMonthsHolidays(now) {
+    const { first, last, month } = getMonthRange(now);
     const start = toDateString(first);
     const end = toDateString(last);
     const year = first.getFullYear();
@@ -99,12 +98,12 @@ function groupByRegion(holidays) {
     return groups;
 }
 
-async function renderHolidays() {
+async function renderHolidays(now) {
     const container = document.getElementById("holidays");
     if (!container) return;
 
     try {
-        const holidays = await getThisMonthsHolidays();
+        const holidays = await getThisMonthsHolidays(now);
 
         if (holidays.length === 0) {
             container.textContent = "";
@@ -144,8 +143,8 @@ async function renderHolidays() {
     }
 }
 
-export function startHolidays() {
-    renderHolidays();
+export function startHolidays(now) {
+    renderHolidays(now);
     const toggle = document.getElementById("hideEmptyRegions");
     if (toggle) {
         toggle.addEventListener("change", renderHolidays);

@@ -391,6 +391,22 @@ time {
     color: #ff9800;
 }
 
+/* table */
+#latestVersion table,
+#latestVersion th,
+#latestVersion td {
+    border: 1px solid black;
+}
+
+#latestVersion table {
+    border-collapse: collapse;
+}
+
+#latestVersion th,
+#latestVersion td {
+    padding: 4px 8px;
+}
+
 /* ==========================================================================
    13. Responsive
    ========================================================================== */

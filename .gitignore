@@ -4,7 +4,6 @@ Thumbs.db
 
 # Editor files
 .vscode/
-tidy.conf
 
 # Environment variables
 .env

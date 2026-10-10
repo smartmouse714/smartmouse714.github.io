@@ -1,8 +1,24 @@
-export function formatHqDate(date) {
-    const dateTime = date.toISOString().split("T")[0];
-    const weekday = date.toLocaleDateString("en-US", {
-        weekday: "short"
-    });
+import { CONFIG } from "./config.js";
+
+function getTimeZoneDateParts(date, timeZone) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        weekday: "short",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(date);
+
+    return Object.fromEntries(
+        parts
+            .filter(({ type }) => ["weekday", "year", "month", "day"].includes(type))
+            .map(({ type, value }) => [type, type === "weekday" ? value : Number(value)])
+    );
+}
+
+export function formatMyDate(date, timeZone = CONFIG.myTimezone) {
+    const { weekday, year, month, day } = getTimeZoneDateParts(date, timeZone);
+    const dateTime = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
     return {
         text: `${weekday}, ${dateTime}`,
@@ -19,18 +35,9 @@ export function formatTime(date, timeZone) {
 }
 
 export function getCalendarDay(date, timeZone) {
-    const parts = new Intl.DateTimeFormat("en", {
-        timeZone,
-        year: "numeric",
-        month: "numeric",
-        day: "numeric"
-    }).formatToParts(date);
+    const { year, month, day } = getTimeZoneDateParts(date, timeZone);
 
-    const values = Object.fromEntries(
-        parts.map(({ type, value }) => [type, Number(value)])
-    );
-
-    return Date.UTC(values.year, values.month - 1, values.day) / 86_400_000;
+    return Date.UTC(year, month - 1, day) / 86_400_000;
 }
 
 export function dayOffsetLabel(referenceZone, targetZone, date = new Date()) {
