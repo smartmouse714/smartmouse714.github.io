@@ -5,22 +5,9 @@ import {
 } from "./config.js";
 
 /**
- * Fetches the live page and returns { version, lastUpdate } for the current release.
- * Run server-side (Node 18+, Route Handler, Server Action): the site does not
- * send CORS headers, so a browser fetch will be blocked.
- * 
- * async function fetchHolidays(country, year) {
-     const key = `${country}-${year}`;
-     if (cache.has(key)) return cache.get(key);
- 
-     const res = await fetch(`${HolidayAPI_BASE}/${year}/${country}`);
-     if (!res.ok) throw new Error(`Failed to fetch holidays for ${country} ${year}`);
- 
+ * Fetches the latest software version information from the provided URLs and updates the HTML content of the element with ID "latestVersion".       
  */
 async function getSoftwareVersion() {
-    const el = document.getElementById("latestVersion");
-    if (!el) return;
-
     let html = `
         <table>
             <thead>
@@ -72,7 +59,37 @@ async function getSoftwareVersion() {
         </table>
     `;
 
+    return html;
+}
+
+const VERSION_CACHE_KEY = 'softwareVersionCache';
+const VERSION_CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hour
+
+async function loadSoftwareVersion() {
+    const el = document.getElementById("latestVersion");
+    if (!el) return;
+
+    const cached = localStorage.getItem(VERSION_CACHE_KEY);
+
+    if (cached) {
+        const { timestamp, html } = JSON.parse(cached);
+
+        if (Date.now() - timestamp < VERSION_CACHE_DURATION) {
+            el.innerHTML = html;
+            return;
+        }
+    }
+
+    const html = await getSoftwareVersion();
     el.innerHTML = html;
+    
+    localStorage.setItem(
+        VERSION_CACHE_KEY,
+        JSON.stringify({
+            html,
+            timestamp: Date.now()
+        })
+    );
 }
 
 /**
@@ -102,45 +119,7 @@ async function updateTeamViewerStatus() {
 }
 
 function refreshAllStatuses() {
-    // updateMicrosoftStatus();
     updateTeamViewerStatus();
-
-    // getSoftwareVersion();
-    // console.log(`Version: ${ version } `);        // Version: 3.23.0
-    // console.log(`Last Update: ${ lastUpdate } `); // Last Update: August 2026
-}
-
-const VERSION_CACHE_KEY = 'softwareVersionCache';
-const VERSION_CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hour
-
-async function loadSoftwareVersion() {
-    const cached = localStorage.getItem(VERSION_CACHE_KEY);
-
-    if (cached) {
-        const { timestamp, version, lastUpdate } = JSON.parse(cached);
-
-        if (Date.now() - timestamp < VERSION_CACHE_DURATION) {
-            // console.log(`Version: ${version}`);
-            // console.log(`Last Update: ${lastUpdate}`);
-            return { version, lastUpdate };
-        }
-    }
-
-    const { version, lastUpdate } = await getSoftwareVersion();
-
-    localStorage.setItem(
-        VERSION_CACHE_KEY,
-        JSON.stringify({
-            version,
-            lastUpdate,
-            timestamp: Date.now(),
-        })
-    );
-
-    // console.log(`Version: ${version}`);
-    // console.log(`Last Update: ${lastUpdate}`);
-
-    return { version, lastUpdate };
 }
 
 const refresh30minInterval = CONFIG.refresh1minInterval * 30;

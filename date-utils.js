@@ -44,7 +44,12 @@ export function dayOffsetLabel(referenceZone, targetZone, date = new Date()) {
     const difference =
         getCalendarDay(date, targetZone) - getCalendarDay(date, referenceZone);
 
-    if (difference === 1) return "Tomorrow";
-    if (difference === -1) return "Yesterday";
-    return "";
+    switch (difference) {
+        case 1:
+            return "Tomorrow";
+        case -1:
+            return "Yesterday";
+        default:
+            return "";
+    }
 }

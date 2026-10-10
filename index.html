@@ -91,7 +91,13 @@
                 </details>
             </fieldset>
             <fieldset title="Adam Prosser">
-                <legend>Cambridge, United Kingdom</legend>
+                <legend>Cambridge, United Kingdom<button aria-label="About UK DST" command="show-modal"
+                        commandfor="dialogUK">i</button></legend>
+                <dialog id="dialogUK" class="info-dialog">
+                    <p>DST starts on the last Sunday of March and ends on the last Sunday of October in the United Kingdom.
+                    </p>
+                    <button command="close" commandfor="dialogUK">OK</button>
+                </dialog>
                 <details>
                     <summary>
                         <time id="LondonClock"></time>
@@ -103,7 +109,13 @@
                 </details>
             </fieldset>
             <fieldset title="Todd Zmetana">
-                <legend>Calgary, Canada</legend>
+                <legend>Calgary, Canada<button aria-label="About CA DST" command="show-modal"
+                        commandfor="dialogCA">i</button></legend>
+                <dialog id="dialogCA" class="info-dialog">
+                    <p>DST starts on the second Sunday of March and ends on the first Sunday of November in Canada.
+                    </p>
+                    <button command="close" commandfor="dialogCA">OK</button>
+                </dialog>
                 <details>
                     <summary>
                         <time id="DenverClock"></time>
@@ -118,15 +130,9 @@
         <section class="column">
             <h1 class="column-heading">3rd Party</h1>
             <fieldset>
-                <legend>Azure</legend> <span id="azStatus">OK</span>
-            </fieldset>
-            <fieldset>
                 <legend>TeamViewer</legend> <span id="teamviewerStatus">OK</span>
             </fieldset>
-            <fieldset>
-                <legend>Local Incidents</legend> <span id="vicIncidents">OK</span>
-            </fieldset>
-			<h2 class="column-heading">Recently</h2>
+            <h2 class="column-heading">Latest Releases</h2>
             <span id="latestVersion"></span>
         </section>
     </div>
