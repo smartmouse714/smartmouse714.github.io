@@ -3,8 +3,7 @@
  */
 export const CONFIG = {
     myTimezone: "Australia/Melbourne",
-    refreshInterval: 60_000,
-    statusRefreshInterval: 300_000,
+    refresh1minInterval: 60_000,
     colors: {
         black: "#444",
         white: "#fff"
@@ -95,12 +94,15 @@ export const DST_RULES = Object.fromEntries(
     ])
 );
 
+/**
+ * API endpoints
+ */
 export const TeamViewerURL = "https://status.teamviewer.com/api/v2/summary.json";
 export const HolidayAPI_BASE = "https://date.nager.at/api/v3/PublicHolidays";
 export const CATALOG = [
     {
-        title: "Git for Windows",
-        url: "https://api.github.com/repos/git-for-windows/git/releases/latest"
+        title: "Coreutils for Windows",
+        url: "https://api.github.com/repos/microsoft/coreutils/releases/latest"
     },
     {
         title: "Notepad++",

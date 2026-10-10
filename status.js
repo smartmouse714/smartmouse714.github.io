@@ -55,6 +55,18 @@ async function getSoftwareVersion() {
         }
     }
 
+    const response = await fetch(
+        "https://product-details.mozilla.org/1.0/firefox_versions.json"
+    );
+    const data = await response.json();
+    html += `
+        <tr>
+            <td>Mozilla Firefox</td>
+            <td>${data.LATEST_FIREFOX_VERSION}</td>
+            <td>${data.LAST_RELEASE_DATE}</td>
+        </tr>
+    `;
+
     html += `
             </tbody>
         </table>
@@ -93,12 +105,54 @@ function refreshAllStatuses() {
     // updateMicrosoftStatus();
     updateTeamViewerStatus();
 
-    getSoftwareVersion();
+    // getSoftwareVersion();
     // console.log(`Version: ${ version } `);        // Version: 3.23.0
     // console.log(`Last Update: ${ lastUpdate } `); // Last Update: August 2026
 }
 
+const VERSION_CACHE_KEY = 'softwareVersionCache';
+const VERSION_CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hour
+
+async function loadSoftwareVersion() {
+    const cached = localStorage.getItem(VERSION_CACHE_KEY);
+
+    if (cached) {
+        const { timestamp, version, lastUpdate } = JSON.parse(cached);
+
+        if (Date.now() - timestamp < VERSION_CACHE_DURATION) {
+            // console.log(`Version: ${version}`);
+            // console.log(`Last Update: ${lastUpdate}`);
+            return { version, lastUpdate };
+        }
+    }
+
+    const { version, lastUpdate } = await getSoftwareVersion();
+
+    localStorage.setItem(
+        VERSION_CACHE_KEY,
+        JSON.stringify({
+            version,
+            lastUpdate,
+            timestamp: Date.now(),
+        })
+    );
+
+    // console.log(`Version: ${version}`);
+    // console.log(`Last Update: ${lastUpdate}`);
+
+    return { version, lastUpdate };
+}
+
+const refresh30minInterval = CONFIG.refresh1minInterval * 30;
+
 export function startStatus() {
+    // Load version once on page load or if cache expired
+    loadSoftwareVersion();
+
+    // Refresh statuses immediately
     refreshAllStatuses();
-    setInterval(refreshAllStatuses, CONFIG.statusRefreshInterval);
+
+    // Refresh statuses periodically
+    setInterval(refreshAllStatuses, refresh30minInterval);
+    setInterval(loadSoftwareVersion, VERSION_CACHE_DURATION);
 }
